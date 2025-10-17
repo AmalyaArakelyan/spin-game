@@ -1,0 +1,19 @@
+@import "variables";
+
+.container{
+    align-items: center;
+    margin: 0 auto;
+    justify-content: center;
+    background-color: $background-color;
+    width: 390px;
+    height: 100vh;
+
+}
+
+.name{
+    background-color: $secondary-color;
+    color: $main-color;
+    span{
+        color: white;
+    }
+}
