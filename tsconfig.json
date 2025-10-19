@@ -6,6 +6,9 @@
     "resolveJsonModule": true,
     // Ensure all your extensions are handled:
     "allowJs": true,
-    "jsx": "react-native" // or "react" if web
-  }
+    "jsx": "react-native", // or "react" if web
+    "include": ["src/**/*", "images.d.ts"],
+    "baseUrl": "src"
+  },
+  "include": ["src","src/**/*", "images.d.ts"]
 }

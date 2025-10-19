@@ -1,18 +1,40 @@
 @import "variables";
 
 .container{
+    position: relative;
     align-items: center;
     margin: 0 auto;
     justify-content: center;
     background-color: $background-color;
+    background-image: url("../img/Background.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
     width: 390px;
     height: 100vh;
-
 }
-
+.character{
+    position: absolute;
+    top:0;
+    right: 0;
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    height: 100vh;
+    padding-top: 50px;
+    background: url("../img/Characters.png") no-repeat;
+    background-size: contain;
+    background-position: center;
+}
 .name{
+    font-family: "Montserrat", sans-serif;
     background-color: $secondary-color;
     color: $main-color;
+    display: inline-block;
+    padding: 5px 9px;
+    margin: 5px 6px;
+    font-size: 28px;
+    font-weight: 800;
     span{
         color: white;
     }
