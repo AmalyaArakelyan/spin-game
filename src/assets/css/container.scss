@@ -1,15 +1,21 @@
 @import "variables";
-
+.container-wrapper{
+    background-color: $background-color;
+    background-image: url("../img/BackgroundFull.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+}
 .container{
     position: relative;
     align-items: center;
     margin: 0 auto;
     justify-content: center;
-    background-color: $background-color;
-    background-image: url("../img/Background.png");
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
+    //background-color: $background-color;
+    //background-image: url("../img/BackgroundFull.png");
+    //background-repeat: no-repeat;
+    //background-size: cover;
+    //background-position: center;
     width: 390px;
     height: 100vh;
 }
@@ -20,9 +26,9 @@
     display: block;
     margin: 0 auto;
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 110px);
     padding-top: 50px;
-    background: url("../img/Characters.png") no-repeat;
+    background: url("../img/Character.png") no-repeat;
     background-size: contain;
     background-position: center;
 }

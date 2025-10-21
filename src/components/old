@@ -1,0 +1,411 @@
+
+import React, { useEffect, useRef, useState } from "react";
+import slotImg from "../assets/img/symbols/gool_hv1.png";
+import hv1 from "assets/img/symbols/gool_hv1.png";
+import hv2 from    "assets/img/symbols/gool_hv_2.png";
+import hv3 from   "assets/img/symbols/gool_hv3.png";
+import hv4 from   "assets/img/symbols/gool_hv4.png";
+import lv1 from   "assets/img/symbols/gool_lv_1_orange.png";
+import lv2 from      "assets/img/symbols/gool_lv_2_purple.png";
+import lv3 from      "assets/img/symbols/gool_lv_3_yellow.png";
+import lv4 from      "assets/img/symbols/gool_lv_4_green.png";
+import lv5 from      "assets/img/symbols/gool_lv_5_blue.png";
+import wild from      "assets/img/symbols/gool_wild_win.png";
+import CANVAS_BACKGROUND_URL from      "assets/img/Reel_Base.png";
+import CANVAS_BACKGROUND_FRAME from      "assets/img/Reel_Frame.png";
+import {logDOM} from "@testing-library/dom";
+
+// SlotMachineCanvas
+// - 6 reels
+// - 10 symbols per reel (shared symbol set)
+// - Canvas-based rendering and animation
+// - Simple physics for spin/start/stop
+
+    export default function SlotMachineCanvas({
+          reelsCount = 6,
+          symbolsCount = 10,
+          symbolSize = 60, // px (height of one symbol)
+          visibleSymbols = 4, // how many symbols visible per reel
+          spacing = 0, // gap between reels
+      }) {
+        const canvasRef = useRef(null);
+        const rafRef = useRef(null);
+        const reelsSymbols = useRef(null);
+        const [isSpinning, setIsSpinning] = useState(false);
+        const [isStopping, setIsStopping] = useState(false);
+        const BG_IMAGE = useRef<HTMLImageElement | null>(null);
+        // load image symbols (replace with your actual asset paths)
+        const SYMBOLS = useRef([
+            hv1,
+            hv2,
+            hv3,
+            hv4,
+            lv1,
+            lv2,
+            lv3,
+            lv4,
+            lv5,
+            wild,
+        ].map((src, id) => {
+            const img = new Image();
+            img.src = src;
+            img.className = "h-10 w-10";
+
+            return {id, img, name: src.split("/").pop().split(".")[0]};
+        })).current;
+        let test;
+        const REELS_SYMBOLS = [];
+        function initialSymbols( ){
+
+            reelsSymbols.current =  reelsSymbols.current || [];
+
+            const newReelsSymbols = reelsSymbols.current;
+
+            for (let r = 0; r < reelsCount; r++) {
+                newReelsSymbols[r] = newReelsSymbols[r] || [];
+                for (let i = 0; i < SYMBOLS.length; i++) {
+
+                    newReelsSymbols[r][i] = newReelsSymbols[r][i] || SYMBOLS[randIndex()];
+                }
+
+            }
+
+            console.log(reelsSymbols.current)
+        }
+
+
+
+        const RealsSymbols = []
+
+        // <img src={hv1} alt="Slot Machine" className="h-10 w-10" />
+        const reels = useRef(
+            Array.from({ length: reelsCount }).map(() => ({
+                offset: 0,
+                velocity: 10,
+                targetIndex: 0,
+                stopping: false,
+            }))
+        );
+        // helper: pick a random index
+        const randIndex = () => Math.floor(Math.random() * symbolsCount);
+
+        // resize canvas to device pixel ratio
+        function resizeCanvasToDisplaySize(canvas, width, height) {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(width * dpr);
+            canvas.height = Math.floor(height * dpr);
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = '#fff';
+            const bgImg = BG_IMAGE.current;
+            console.log( BG_IMAGE.current)
+            ctx.drawImage(bgImg, 0, 0, width, height);
+
+            // if (bgImg && bgImg.complete) {
+            //     // Draw the image, scaling it to cover the entire canvas area
+            //
+            // } else {
+            //     // Fallback: Draw a dark color if the background image failed to load
+            //     ctx.fillStyle = '#fff';
+            //     ctx.fillRect(0, 0, width, height);
+            // }
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Draw a single symbol (emoji) centered
+
+
+        function drawSymbol(ctx, x, y, w, h, img) {
+
+            // ctx.fillStyle = "#111827";
+            ctx.strokeStyle = "rgba(255,255,255,0.06)";
+            ctx.lineWidth = 1;
+            roundRect(ctx, x + 2, y + 2, w , w , 0);
+            ctx.fill();
+            ctx.stroke();
+            if (img && img.complete) {
+                const pad = Math.floor(h * 0.1);
+                ctx.drawImage(img, x + pad, y + pad, w - pad * 2, w - pad * 2);
+            }
+        }
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        function draw() {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            resizeCanvasToDisplaySize(canvas, width, height);
+
+            ctx.clearRect(0, 0, width, height);
+
+            const reelWidth = (width - spacing * (reelsCount - 1)) / reelsCount;
+            const symH = symbolSize;
+
+            // container background
+            // ctx.fillStyle = "#0f172a"; // dark
+            ctx.fillRect(0, 0, width, height);
+            console.log(reelsSymbols.curren)
+            // draw each reel
+            for (let r = 0; r < reelsCount; r++) {
+                const reel = reels.current[r];
+                const x = r * (reelWidth + spacing);
+
+                // ctx.save();
+                // const reelTop = (height - symH * visibleSymbols) / 2;
+                // ctx.beginPath();
+                // ctx.rect(x, reelTop, reelWidth, symH * visibleSymbols);
+                // ctx.clip();
+                const reelTop = 0
+
+                // compute current offset, wrap-around using modulo
+                const totalHeight = symH * symbolsCount;
+                let offset = reel.offset % totalHeight;
+                if (offset < 0) offset += totalHeight;
+
+                // draw enough symbols to cover area + one extra
+                const startIndex = Math.floor(offset / symH);
+                const startY = reelTop - (offset % symH);
+
+                let drawn = 0;
+
+
+                const centerIndex = Math.floor((offset - symbolSize * (visibleSymbols / 2)) / symbolSize) % symbolsCount;
+
+
+
+
+                // initialSymbols(offset, centerIndex, symH)
+
+                // reelsSymbols.current.forEach((reelSymbols, reelIdx) => {
+                //     if (reelIdx === r) {
+                //         for (let i = 0; i < visibleSymbols + 2; i++) {
+                //             const y = startY + i * symH;
+                //             drawSymbol(ctx, x + 4, y, reelWidth - 8, symH - 6, reelSymbols[i]);
+                //         }
+                //     }
+                // });
+                const reelSymbols = reelsSymbols.current[r]
+                for (let i = 0; i < visibleSymbols + 2; i++) {
+                    // offset in pixels for this slot
+                    const pos = (reel.offset + i * symH) % (symH * symbolsCount);
+                    let idx = Math.floor(pos / symH) % symbolsCount;
+
+                    if (idx < 0) idx += symbolsCount;
+
+                    const y = startY + i * symH;
+                    drawSymbol(ctx, x + 4, y, reelWidth - 8, symH - 6, reelSymbols[idx].img);
+                }
+
+                // for (let i = 0; i < visibleSymbols + 2; i++) {
+                //     // offset in pixels for this slot
+                //     const pos = (reel.offset + i * symH) % (symH * symbolsCount);
+                //     let idx = Math.floor(pos / symH) % symbolsCount;
+                //     if(random || centerIndex === idx){
+                //         idx = randIndex();
+                //     }
+                //     if (idx < 0) idx += symbolsCount;
+                //
+                //     const y = startY + i * symH;
+                //     drawSymbol(ctx, x + 4, y, reelWidth - 8, symH - 6, SYMBOLS[idx]);
+                // }
+                ctx.restore();
+
+                // draw faint border around reel
+                // ctx.strokeStyle = "rgba(255,255,255,0.04)";
+                // ctx.lineWidth = 1;
+                roundRect(ctx, x + 1, reelTop + 1, reelWidth, symH * visibleSymbols, 0);
+                ctx.stroke();
+
+                // // highlight center line for alignment
+                // ctx.fillStyle = "rgba(255,255,255,0.02)";
+                // ctx.fillRect(x , reelTop + symH, reelWidth, 2);
+            }
+        }
+        useEffect(() => {
+            const bgImg = new Image();
+            bgImg.src = CANVAS_BACKGROUND_URL;
+            BG_IMAGE.current = bgImg;
+
+            initialSymbols()
+            draw();
+        },[])
+        // main draw loop
+        useEffect(() => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+
+            // physics step: update offsets and velocities
+            function step(dt) {
+                // dt in seconds
+                for (let r = 0; r < reelsCount; r++) {
+                    const reel = reels.current[r];
+                    // basic integration
+                    reel.offset -= reel.velocity * dt;
+
+                    if (reel.stopping) {
+                        // slow down gently and snap to target
+                        const totalH = symbolSize * symbolsCount;
+                        // compute distance to target index (in pixels) for the current rotation cycle
+                        const currentPos = ((reel.offset % totalH) + totalH) % totalH;
+                        const targetPos = (reel.targetIndex * symbolSize) % totalH;
+
+                        // shortest distance (allow wrap)
+                        let diff = targetPos - currentPos;
+                        if (diff > totalH / 2) diff -= totalH;
+                        if (diff < -totalH / 2) diff += totalH;
+
+                        // spring-like deceleration
+                        const spring = 6; // stiffness
+                        const damping = 6; // damping
+                        const accel = diff * spring - reel.velocity * damping;
+                        reel.velocity += accel * dt;
+
+                        // if velocity and diff small, lock to target and mark stopped
+                        if (Math.abs(reel.velocity) < 6 && Math.abs(diff) < 2) {
+                            // snap exact
+                            reel.offset += diff;
+                            reel.velocity = 0;
+                            reel.stopping = false;
+                            reel.stopped = true;
+                        }
+                    } else if (isSpinning) {
+                        // keep spinning: small friction
+                        reel.velocity *= 0.995;
+                    } else {
+                        // idle friction to zero
+                        reel.velocity *= 0.92;
+                        if (Math.abs(reel.velocity) < 0.5) reel.velocity = 0;
+                    }
+                }
+            }
+
+
+            let last = performance.now();
+
+            function loop(now) {
+                if(isSpinning) {
+                    const dt = Math.min(0.05, (now - last) / 1000);
+                    last = now;
+                    step(dt);
+                    draw(0);
+                    rafRef.current = requestAnimationFrame(loop);
+                }
+            }
+
+            if(isSpinning) {
+                rafRef.current = requestAnimationFrame(loop);
+            }
+
+
+
+            return () => cancelAnimationFrame(rafRef.current);
+        }, [reelsCount, symbolsCount, symbolSize, visibleSymbols, isSpinning]);
+
+        // Start spinning: set random velocities
+        function startSpin() {
+            // initialize reels
+            for (let r = 0; r < reelsCount; r++) {
+                const reel = reels.current[r];
+                reel.offset = Math.random() * symbolSize * symbolsCount;
+                // velocity px/sec (randomized)
+                reel.velocity = 400 + Math.random() * 500 + r * 100;
+                reel.stopping = false;
+                reel.stopped = false;
+            }
+            setIsStopping(false);
+            setIsSpinning(true);
+        }
+
+        // Stop with stagger: stop each reel to random target index
+        function stopSpin() {
+            if (!isSpinning) return;
+            console.log(isSpinning)
+            setIsStopping(true);
+            // schedule stops staggered
+            const baseDelay = 300; // ms between reel stops
+            for (let r = 0; r < reelsCount; r++) {
+                const reel = reels.current[r];
+                const chosen = randIndex();
+                setTimeout(() => {
+                    reel.targetIndex = chosen;
+                    reel.stopping = true;
+                }, r * baseDelay);
+            }
+
+            // after all reels likely stopped, clear spinning flag
+            setTimeout(() => {
+                setIsSpinning(false);
+                setIsStopping(false);
+            }, reelsCount * baseDelay + 2000);
+        }
+
+        // Quick spin (start then auto-stop after duration)
+        function quickSpin(duration = 4000) {
+            startSpin();
+            setTimeout(() => { stopSpin(); console.log(1111111111111111)}, duration);
+        }
+
+        // utility to export visible result (indexes)
+        function getVisibleIndexes() {
+            const results = [];
+            for (let r = 0; r < reelsCount; r++) {
+                const reel = reels.current[r];
+                const totalH = symbolSize * symbolsCount;
+                let offset = ((reel.offset % totalH) + totalH) % totalH;
+                const centerIndex = Math.floor((offset + symbolSize * (visibleSymbols / 2)) / symbolSize) % symbolsCount;
+                results.push(centerIndex);
+            }
+            return results;
+        }
+
+        // basic win logic: check if all visible center symbols match
+        function checkWin() {
+            const vis = getVisibleIndexes();
+            const first = vis[0];
+            const win = vis.every((v) => v === first);
+            return { win, symbol: win ? first : null, indexes: vis };
+        }
+
+        // initial canvas size
+        const canvasStyle = { width: "100%", height: `${symbolSize * visibleSymbols + 40}px`, borderRadius: "12px" };
+
+        return (
+            <div className="p-4 bg-slate-900 rounded-xl max-w-full">
+                <div className="mb-3 flex items-center justify-between">
+
+                    <h3 className="text-white text-lg font-semibold">Canvas Slot Reels</h3>
+                    <div className="space-x-2">
+                        <button
+                            onClick={() => quickSpin()}
+                            className="px-3 py-1 rounded bg-emerald-500 text-white font-medium shadow"
+                        >
+                            Quick Spin
+                        </button>
+                        <button
+                            onClick={() => (isSpinning ? stopSpin() : startSpin())}
+                            className="px-3 py-1 rounded bg-indigo-600 text-white font-medium shadow"
+                        >
+                            {isSpinning ? (isStopping ? "Stopping..." : "Stop") : "Start"}
+                        </button>
+                    </div>
+                </div>
+
+                <canvas ref={canvasRef} style={canvasStyle} />
+
+            </div>
+        );
+    }
+ image like a background for canvas

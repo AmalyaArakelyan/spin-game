@@ -1,0 +1,74 @@
+@import "variables";
+.overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 84, 255, 0.66);
+  backdrop-filter: blur(21px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-ontent{
+
+  padding: 20px;
+  min-width: 200px;
+  text-align: center;
+}
+.modal-content{
+  background: $secondary-color;
+  padding: 30px 40px 60px 40px;
+  margin-top: 10px;
+  h2{
+    font-family: "Montserrat", sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: $main-color;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  p{
+    font-family: "Montserrat", sans-serif;
+    font-size: 72px;
+    font-weight: 900;
+    color: white;
+    line-height: 90%;
+    margin: 0;
+  }
+  span{
+    font-family: "Montserrat", sans-serif;
+    font-size: 23px;
+    font-weight: 800;
+    color: $secondary-light;
+    text-transform: uppercase;
+  }
+
+}
+.modal_button{
+  position: relative;
+  background: linear-gradient(180deg, #FFFB04 0.57%, #D89E02 100.39%);
+  box-shadow: 0 0 21.02px 0 #072769;
+  font-family: "Montserrat", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 128%;
+  text-align: center;
+  vertical-align: middle;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 4px;
+  padding: 20px 30px;
+  transform: translateY(-40%);
+  z-index: 2;
+}
+.modal_button::before {
+  content: "";
+  position: absolute;
+  top: -50%; /* Start below the button */
+  left: 50%;
+  transform: translateX(-50%); /* Center it */
+  /* Dimensions and Styling of the shadow element */
+  height: 47px;
+  width: 197px; /* Slightly narrower than the button */
+  background: url("../img/flare.png") no-repeat center bottom / contain;;
+  z-index: 1; /* Puts it behind the button */
+}
