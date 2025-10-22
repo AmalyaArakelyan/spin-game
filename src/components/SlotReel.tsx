@@ -17,6 +17,15 @@ import CANVAS_BACKGROUND_FRAME from      "assets/img/Reel_Frame.png";
 import SpinButton from "./SpinButton";
 import WinModal from "./WinModal";
 
+interface SlotMachineCanvasProps {
+    hasMatch: boolean,
+    matches: Array<{ symbolId: number, positions: Array<{ c: number, r: number, id: string }> }>,
+    matrix: Array<Array<{ id: string, symbol: { id: number, img: HTMLImageElement, name: string } }>>,
+    alreadyShown: boolean,
+    bonus: number
+
+}
+
     export default function SlotMachineCanvas({
           reelsCount = 6,
           symbolsCount = 10,
@@ -24,15 +33,18 @@ import WinModal from "./WinModal";
           visibleSymbols = 4, // how many symbols visible per reel
           bonus = 100, // bonus per matched symbol
           spacing = 0,
+          baseDelay = 300 // ms between reel stops
       }) {
         const canvasRef = useRef(null);
-        const rafRef = useRef(null);
-        const reelsSymbols = useRef(null);
-        const winSlots = useRef();
+        const rafRef = useRef(0);
+        const reelsSymbols = useRef([]);
+        const winSlots = useRef<SlotMachineCanvasProps>();
         const stopSpinTimeout = useRef(null);
 
         const [isSpinning, setIsSpinning] = useState(false);
         const [isStopping, setIsStopping] = useState(false);
+        const [allReelsStopped, setAllReelStopped] = useState(false);
+        const [showWinModal, setShowWinModal] = useState(false);
 
         const bgImg = useMemo(() => {
             const img = new Image();
@@ -70,9 +82,7 @@ import WinModal from "./WinModal";
 
         function initialSymbols( ){
 
-            reelsSymbols.current =  reelsSymbols.current || [];
-
-            const newReelsSymbols = reelsSymbols.current;
+            const newReelsSymbols = reelsSymbols.current || [];
 
             for (let r = 0; r < reelsCount; r++) {
                 newReelsSymbols[r] = newReelsSymbols[r] || [];
@@ -85,6 +95,7 @@ import WinModal from "./WinModal";
                         };
                 }
             }
+            reelsSymbols.current = newReelsSymbols;
         }
         function getVisibleMatrix() {
             const matrix = [];
@@ -92,11 +103,27 @@ import WinModal from "./WinModal";
 
             for (let r = 0; r < reelsCount; r++) {
                 const reel = reels.current[r];
-                let offset = ((reel.offset % totalH) + totalH) % totalH;
+
+                let offset = reel.offset;
+                let targetPos = reel.targetPos !== undefined ? reel.targetPos : reel.offset;
+                // Normalize to 0..totalH FIRST
+                offset = ((offset % totalH) + totalH) % totalH;
+
+                // Now find nearest symbol cell
+                offset = Math.round(offset / symbolSize) * symbolSize;
+
+
+                const gap = offset - targetPos;
+                const gapC = gap < 0 ? -1 : 1;
+
+                if (Math.abs(gap) / symbolSize > visibleSymbols + 1) {
+                    offset -= symbolSize * gapC;
+                } else if (Math.abs(gap) / symbolSize <  visibleSymbols + 1) {
+                    offset += symbolSize * gapC;
+                }
+
                 const startIndex = Math.floor(offset / symbolSize);
-
                 const reelColumn = [];
-
                 for (let row = 0; row < visibleSymbols; row++) {
                     const idx = (startIndex + row) % symbolsCount;
                     reelColumn.push(reelsSymbols.current[r][idx]); // full symbol object
@@ -176,7 +203,9 @@ import WinModal from "./WinModal";
                 offset: 0,
                 velocity: 10,
                 targetIndex: 0,
+                targetPos: 0,
                 stopping: false,
+                stopped: true,
             }))
         );
 
@@ -215,7 +244,7 @@ import WinModal from "./WinModal";
                 x: 8,
                 // center vertically inside canvas: compute top so the reel window is centered
                 y: 9,
-                width: Math.max(100, width -20 ), // ensure some minimal width
+                width: Math.max(100, width -25 ), // ensure some minimal width
                 height: symbolSize * visibleSymbols + 10,
                 radius: 14,
             };
@@ -296,7 +325,7 @@ import WinModal from "./WinModal";
                 ctx.restore();
 
             // reel separator
-            if(r!= 0) {
+            if(r !== 0) {
                 ctx.beginPath();
                 ctx.strokeStyle = "#a7a64d"; // left color (your original)
                 ctx.lineWidth = 1;
@@ -372,13 +401,16 @@ import WinModal from "./WinModal";
                         const damping = 6; // damping
                         const accel = diff * spring - reel.velocity * damping;
                         reel.velocity += accel * dt;
-
+                        reel.targetPos = targetPos;
                         // if velocity and diff small, lock to target and mark stopped
                         if (Math.abs(reel.velocity) < 6 && Math.abs(diff) < 2) {
-                                reel.offset = reel.offset - reel.offset%57;
                                 reel.velocity = 0;
                                 reel.stopping = false;
                                 reel.stopped = true;
+                        }
+
+                        if(r === reelsCount -1 && allReelsStopped === false) {
+                                setAllReelStopped(true);
                         }
                     } else if (isSpinning) {
                         // keep spinning: small friction
@@ -402,7 +434,6 @@ import WinModal from "./WinModal";
                     rafRef.current = requestAnimationFrame(loop);
                 }
             }
-
             if(isSpinning) {
                 rafRef.current = requestAnimationFrame(loop);
             }
@@ -412,18 +443,21 @@ import WinModal from "./WinModal";
 
         // Start spinning: set random velocities
         function startSpin() {
+
+            if (isSpinning) return;
             // initialize reels
             winSlots.current = null;
             for (let r = 0; r < reelsCount; r++) {
                 const reel = reels.current[r];
                 reel.offset = Math.random() * symbolSize * symbolsCount;
                 // velocity px/sec (randomized)
-                reel.velocity = 400 + Math.random() * 500 + r * 100;
+                reel.velocity = baseDelay + Math.random() * 500 + r * 100;
                 reel.stopping = false;
                 reel.stopped = false;
             }
             setIsStopping(false);
             setIsSpinning(true);
+            setAllReelStopped(false);
         }
 
         // Stop with stagger: stop each reel to random target index
@@ -432,7 +466,6 @@ import WinModal from "./WinModal";
 
             setIsStopping(true);
             // schedule stops staggered
-            const baseDelay = 400; // ms between reel stops
 
             for (let r = 0; r < reelsCount; r++) {
                 const reel = reels.current[r];
@@ -442,22 +475,26 @@ import WinModal from "./WinModal";
                     reel.stopping = true;
                 }, r * baseDelay);
             }
-
-            // after all reels likely stopped, clear spinning flag
-            setTimeout(() => {
-                setIsSpinning(false);
-                setIsStopping(false);
-                winSlots.current = getMergedMatches()
-                draw();
-                console.log('winSlots.current', winSlots.current)
-                console.log(reelsSymbols.current, 'reelsSymbols.current')
-                console.log("reels.currents",reels.current)
-            }, reelsCount * baseDelay + 3000);
-
-            setTimeout(() => {
-                draw();
-            }   , (reelsCount + 1) * baseDelay + 4000);
         }
+        // after all reels likely stopped, clear spinning flag
+
+        useEffect(()=>{
+            function finalizeStop() {
+                // after all reels likely stopped, clear spinning flag
+                setTimeout(() => {
+                    setIsSpinning(false);
+                    setIsStopping(false);
+                    winSlots.current = getMergedMatches()
+                    draw();
+                    setTimeout(() => {
+                        setShowWinModal(true);
+                    }   , 500);
+                }, reelsCount * baseDelay + 3000);
+            }
+            if (allReelsStopped) {
+                finalizeStop();
+            }
+        }, [allReelsStopped, ]);
 
         // Quick spin (start then auto-stop after duration)
         function quickSpin() {
@@ -475,7 +512,7 @@ import WinModal from "./WinModal";
                 <canvas ref={canvasRef} style={canvasStyle} />
                 <SpinButton onClick={quickSpin} />
 
-                <WinModal winSlots={winSlots}/>
+                <WinModal winSlots={winSlots} showModal={showWinModal} onClose={()=>{setShowWinModal(false)}}/>
             </div>
         );
     }
