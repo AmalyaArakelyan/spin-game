@@ -29,6 +29,8 @@ import WinModal from "./WinModal";
         const rafRef = useRef(null);
         const reelsSymbols = useRef(null);
         const winSlots = useRef();
+        const stopSpinTimeout = useRef(null);
+
         const [isSpinning, setIsSpinning] = useState(false);
         const [isStopping, setIsStopping] = useState(false);
 
@@ -459,9 +461,10 @@ import WinModal from "./WinModal";
 
         // Quick spin (start then auto-stop after duration)
         function quickSpin() {
+            stopSpinTimeout.current && clearTimeout(stopSpinTimeout.current);
             winSlots.current = null;
             startSpin();
-            setTimeout(() => { stopSpin()}, 2000);
+            stopSpinTimeout.current =  setTimeout(() => { stopSpin()}, 3000);
         }
 
         // initial canvas size
